@@ -328,7 +328,7 @@ double OdometryServer::computeCovarianceMultiplier(size_t num_correspondences,
                                 static_cast<double>(num_source_points);
 
     // Absolute correspondences quality: how many inliers vs expected minimum
-    double correspondence_quality = static_cast<double>(num_correspondences) / nominal_keypoint_count_ * min_keypoint_ratio_;
+    double correspondence_quality = static_cast<double>(num_correspondences) / (nominal_keypoint_count_ * min_keypoint_ratio_);
 
     // Clamp to [0, 1]
     correspondence_quality = std::clamp(correspondence_quality, 0.0, 1.0);
@@ -343,7 +343,7 @@ double OdometryServer::computeCovarianceMultiplier(size_t num_correspondences,
     // 5. Map quality [0,1] -> multiplier [1, max_covariance_multiplier_]
     //    Quadratic mapping. Options for Qubic, Quadratic, Linear
     const double error = 1.0 - quality_factor;      // in [0, 1]
-    double multiplier = 1.0 + (max_covariance_multiplier_ - 1.0) * error * error;
+    double multiplier = 1.0 + (max_covariance_multiplier_ - 1.0) * error;
 
     // 6. Optional exponential smoothing to reduce jitter frame-to-frame
     if (enable_covariance_smoothing_) {
