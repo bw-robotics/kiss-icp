@@ -50,6 +50,9 @@ private:
     /// config object)
     void initializeParameters(kiss_icp::pipeline::KISSConfig &config);
 
+    // Helper method to log all node parameters
+    void logParameters(kiss_icp::pipeline::KISSConfig &config);
+
     /// Register new frame
     void RegisterFrame(const sensor_msgs::msg::PointCloud2::ConstSharedPtr &msg);
 
