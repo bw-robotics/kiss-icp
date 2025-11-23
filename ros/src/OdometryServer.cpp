@@ -84,14 +84,6 @@ OdometryServer::OdometryServer(const rclcpp::NodeOptions &options)
     // (use_adaptive_covariance_ and metrics_only_mode_ were set in initializeParameters)
     kiss_icp_->setUseRegistrationMetrics(use_adaptive_covariance_ || metrics_only_mode_);
     
-    if (metrics_only_mode_) {
-        RCLCPP_INFO(get_logger(), "Registration metrics collection ENABLED (metrics-only mode - fixed covariance)");
-    } else if (use_adaptive_covariance_) {
-        RCLCPP_INFO(get_logger(), "Registration metrics collection ENABLED (adaptive covariance)");
-    } else {
-        RCLCPP_INFO(get_logger(), "Registration metrics collection DISABLED (using original method)");
-    }
-    
     // Initialize metrics publisher if metrics collection is enabled
     if (use_adaptive_covariance_ || metrics_only_mode_) {
         rclcpp::QoS metrics_qos((rclcpp::SystemDefaultsQoS().keep_last(10).durability_volatile()));
@@ -147,6 +139,14 @@ void OdometryServer::initializeParameters(kiss_icp::pipeline::KISSConfig &config
     
     metrics_only_mode_ = declare_parameter<bool>("adaptive_covariance.metrics_only_mode", false);
     RCLCPP_INFO(this->get_logger(), "\tMetrics only mode: %d", metrics_only_mode_);
+    
+    if (metrics_only_mode_) {
+        RCLCPP_INFO(get_logger(), "Registration metrics collection ENABLED (metrics-only mode - fixed covariance)");
+    } else if (use_adaptive_covariance_) {
+        RCLCPP_INFO(get_logger(), "Registration metrics collection ENABLED (adaptive covariance)");
+    } else {
+        RCLCPP_INFO(get_logger(), "Registration metrics collection DISABLED (using original method)");
+    }
     
     // Only read other adaptive params if enabled or metrics_only_mode
     if (use_adaptive_covariance_ || metrics_only_mode_) {
