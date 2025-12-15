@@ -165,46 +165,47 @@ void OdometryServer::initializeParameters(kiss_icp::pipeline::KISSConfig &config
 }
 
 void OdometryServer::logParameters(kiss_icp::pipeline::KISSConfig &config) {
-    RCLCPP_DEBUG(this->get_logger(), "Parameters:");
-    RCLCPP_DEBUG(this->get_logger(), "\tBase frame: %s", base_frame_.c_str());
-    RCLCPP_DEBUG(this->get_logger(), "\tLiDAR odometry frame: %s", lidar_odom_frame_.c_str());
-    RCLCPP_DEBUG(this->get_logger(), "\tPublish odometry transform: %d", publish_odom_tf_);
-    RCLCPP_DEBUG(this->get_logger(), "\tInvert odometry transform: %d", invert_odom_tf_);
-    RCLCPP_DEBUG(this->get_logger(), "\tPublish debug clouds: %d", publish_debug_clouds_);
-    RCLCPP_DEBUG(this->get_logger(), "\tPosition covariance: %.2f", position_covariance_);
-    RCLCPP_DEBUG(this->get_logger(), "\tOrientation covariance: %.2f", orientation_covariance_);
+    auto logger = this->get_logger();
+    RCLCPP_DEBUG(logger, "Parameters:");
+    RCLCPP_DEBUG(logger, "\tBase frame: %s", base_frame_.c_str());
+    RCLCPP_DEBUG(logger, "\tLiDAR odometry frame: %s", lidar_odom_frame_.c_str());
+    RCLCPP_DEBUG(logger, "\tPublish odometry transform: %d", publish_odom_tf_);
+    RCLCPP_DEBUG(logger, "\tInvert odometry transform: %d", invert_odom_tf_);
+    RCLCPP_DEBUG(logger, "\tPublish debug clouds: %d", publish_debug_clouds_);
+    RCLCPP_DEBUG(logger, "\tPosition covariance: %.2f", position_covariance_);
+    RCLCPP_DEBUG(logger, "\tOrientation covariance: %.2f", orientation_covariance_);
     
     // Adaptive covariance parameters
-    RCLCPP_DEBUG(this->get_logger(), "\tUse adaptive covariance: %d", use_adaptive_covariance_);    
-    RCLCPP_DEBUG(this->get_logger(), "\tMetrics only mode: %d", metrics_only_mode_);
+    RCLCPP_DEBUG(logger, "\tUse adaptive covariance: %d", use_adaptive_covariance_);    
+    RCLCPP_DEBUG(logger, "\tMetrics only mode: %d", metrics_only_mode_);
     
     if (metrics_only_mode_) {
-        RCLCPP_INFO(get_logger(), "Registration metrics collection ENABLED (metrics-only mode - fixed covariance)");
+        RCLCPP_INFO(logger, "Registration metrics collection ENABLED (metrics-only mode - fixed covariance)");
     } else if (use_adaptive_covariance_) {
-        RCLCPP_INFO(get_logger(), "Registration metrics collection ENABLED (adaptive covariance)");
+        RCLCPP_INFO(logger, "Registration metrics collection ENABLED (adaptive covariance)");
     } else {
-        RCLCPP_INFO(get_logger(), "Registration metrics collection DISABLED (using original method)");
+        RCLCPP_INFO(logger, "Registration metrics collection DISABLED (using original method)");
     }
     
     // Only read other adaptive params if enabled or metrics_only_mode
     if (use_adaptive_covariance_ || metrics_only_mode_) {
-        RCLCPP_DEBUG(this->get_logger(), "\tNominal keypoint count: %.0f", nominal_keypoint_count_);
-        RCLCPP_DEBUG(this->get_logger(), "\tMin keypoint ratio: %.2f", min_keypoint_ratio_);
-        RCLCPP_DEBUG(this->get_logger(), "\tMax covariance multiplier: %.1fx", max_covariance_multiplier_);
-        RCLCPP_DEBUG(this->get_logger(), "\tEnable covariance smoothing: %d", enable_covariance_smoothing_);
-        RCLCPP_DEBUG(this->get_logger(), "\tCovariance smoothing alpha: %.2f", covariance_smoothing_alpha_);
+        RCLCPP_DEBUG(logger, "\tNominal keypoint count: %.0f", nominal_keypoint_count_);
+        RCLCPP_DEBUG(logger, "\tMin keypoint ratio: %.2f", min_keypoint_ratio_);
+        RCLCPP_DEBUG(logger, "\tMax covariance multiplier: %.1fx", max_covariance_multiplier_);
+        RCLCPP_DEBUG(logger, "\tEnable covariance smoothing: %d", enable_covariance_smoothing_);
+        RCLCPP_DEBUG(logger, "\tCovariance smoothing alpha: %.2f", covariance_smoothing_alpha_);
     }
 
-    RCLCPP_DEBUG(this->get_logger(), "\tMax range: %.2f", config.max_range);
-    RCLCPP_DEBUG(this->get_logger(), "\tMin range: %.2f", config.min_range);
-    RCLCPP_DEBUG(this->get_logger(), "\tDeskew: %d", config.deskew);
-    RCLCPP_DEBUG(this->get_logger(), "\tVoxel size: %.2f", config.voxel_size);
-    RCLCPP_DEBUG(this->get_logger(), "\tMax points per voxel: %d", config.max_points_per_voxel);
-    RCLCPP_DEBUG(this->get_logger(), "\tInitial threshold: %.2f", config.initial_threshold);
-    RCLCPP_DEBUG(this->get_logger(), "\tMin motion threshold: %.2f", config.min_motion_th);
-    RCLCPP_DEBUG(this->get_logger(), "\tMax number of iterations: %d", config.max_num_iterations);
-    RCLCPP_DEBUG(this->get_logger(), "\tConvergence criterion: %.2f", config.convergence_criterion);
-    RCLCPP_DEBUG(this->get_logger(), "\tMax number of threads: %d", config.max_num_threads);
+    RCLCPP_DEBUG(logger, "\tMax range: %.2f", config.max_range);
+    RCLCPP_DEBUG(logger, "\tMin range: %.2f", config.min_range);
+    RCLCPP_DEBUG(logger, "\tDeskew: %d", config.deskew);
+    RCLCPP_DEBUG(logger, "\tVoxel size: %.2f", config.voxel_size);
+    RCLCPP_DEBUG(logger, "\tMax points per voxel: %d", config.max_points_per_voxel);
+    RCLCPP_DEBUG(logger, "\tInitial threshold: %.2f", config.initial_threshold);
+    RCLCPP_DEBUG(logger, "\tMin motion threshold: %.2f", config.min_motion_th);
+    RCLCPP_DEBUG(logger, "\tMax number of iterations: %d", config.max_num_iterations);
+    RCLCPP_DEBUG(logger, "\tConvergence criterion: %.2f", config.convergence_criterion);
+    RCLCPP_DEBUG(logger, "\tMax number of threads: %d", config.max_num_threads);
 }
 
 void OdometryServer::RegisterFrame(const sensor_msgs::msg::PointCloud2::ConstSharedPtr &msg) {
@@ -327,27 +328,35 @@ double OdometryServer::computeCovarianceMultiplier(size_t num_correspondences,
         return max_covariance_multiplier_;  // Worst case
     }
     
-    // Calculate correspondence ratio
-    double correspondence_ratio = static_cast<double>(num_correspondences) / 
-                                  static_cast<double>(num_source_points);
-    
-    // Normalize by expected ratio (based on nominal keypoint count)
-    double quality_ratio = correspondence_ratio * num_source_points / nominal_keypoint_count_;
-    
-    // Quality factor: 0 (worst) to 1 (best)
-    double quality_factor = std::clamp(quality_ratio / min_keypoint_ratio_, 0.0, 1.0);
-    
-    // Compute multiplier: 1.0 (good quality) to max_multiplier_ (poor quality)
-    double multiplier = 1.0 + (max_covariance_multiplier_ - 1.0) * (1.0 - quality_factor);
-    
-    // Optional exponential smoothing to reduce jitter
+    // Inlier ratio: how many source points actually matched, in [0, 1]
+    const double inlier_ratio = static_cast<double>(num_correspondences) /
+                                static_cast<double>(num_source_points);
+
+    // Absolute correspondences quality: how many inliers vs expected minimum
+    double correspondence_quality = static_cast<double>(num_correspondences) / (nominal_keypoint_count_ * min_keypoint_ratio_);
+
+    // Clamp to [0, 1]
+    correspondence_quality = std::clamp(correspondence_quality, 0.0, 1.0);
+
+    // 4. Combine inlier ratio + absolute quality into a single quality factor
+    //    Simple product: both have to be good to get a high score.
+    double quality_factor = correspondence_quality * inlier_ratio;
+
+    // Safety clamp
+    quality_factor = std::clamp(quality_factor, 0.0, 1.0);
+
+    // 5. Map quality [0,1] -> multiplier [1, max_covariance_multiplier_]
+    //    Quadratic mapping. Options for Qubic, Quadratic, Linear
+    const double error = 1.0 - quality_factor;      // in [0, 1]
+    double multiplier = 1.0 + (max_covariance_multiplier_ - 1.0) * error;
+
+    // 6. Optional exponential smoothing to reduce jitter frame-to-frame
     if (enable_covariance_smoothing_) {
         smoothed_covariance_multiplier_ = covariance_smoothing_alpha_ * multiplier +
-                                          (1.0 - covariance_smoothing_alpha_) * 
-                                          smoothed_covariance_multiplier_;
-        return smoothed_covariance_multiplier_;
+            (1.0 - covariance_smoothing_alpha_) * smoothed_covariance_multiplier_;
+        multiplier = smoothed_covariance_multiplier_;
     }
-    
+
     return multiplier;
 }
 
