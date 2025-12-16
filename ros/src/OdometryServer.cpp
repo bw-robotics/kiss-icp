@@ -333,7 +333,7 @@ double OdometryServer::computeCovarianceMultiplier(size_t num_correspondences,
                                 static_cast<double>(num_source_points);
 
     // Absolute correspondences quality: how many inliers vs expected minimum
-    double correspondence_quality = static_cast<double>(num_correspondences) / (nominal_keypoint_count_ * min_keypoint_ratio_);
+    double correspondence_quality = static_cast<double>(num_correspondences) / (nominal_correspondences_count_);
 
     // Clamp to [0, 1]
     correspondence_quality = std::clamp(correspondence_quality, 0.0, 1.0);
