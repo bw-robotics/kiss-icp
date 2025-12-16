@@ -132,11 +132,10 @@ void OdometryServer::initializeParameters(kiss_icp::pipeline::KISSConfig &config
     
     // Only read other adaptive params if enabled or metrics_only_mode
     if (use_adaptive_covariance_ || metrics_only_mode_) {
-        nominal_keypoint_count_ = declare_parameter<double>("adaptive_covariance.nominal_keypoints", 1000.0);
-        min_keypoint_ratio_ = declare_parameter<double>("adaptive_covariance.min_ratio", 0.5);
-        max_covariance_multiplier_ = declare_parameter<double>("adaptive_covariance.max_multiplier", 10.0);
+        nominal_correspondences_count_ = declare_parameter<double>("adaptive_covariance.nominal_correspondences", 3500.0);
+        max_covariance_multiplier_ = declare_parameter<double>("adaptive_covariance.max_multiplier", 50.0);
         enable_covariance_smoothing_ = declare_parameter<bool>("adaptive_covariance.enable_smoothing", true);
-        covariance_smoothing_alpha_ = declare_parameter<double>("adaptive_covariance.smoothing_alpha", 0.3);
+        covariance_smoothing_alpha_ = declare_parameter<double>("adaptive_covariance.smoothing_alpha", 0.7);
     }
 
     config.max_range = declare_parameter<double>("data.max_range", config.max_range);
@@ -189,8 +188,7 @@ void OdometryServer::logParameters(kiss_icp::pipeline::KISSConfig &config) {
     
     // Only read other adaptive params if enabled or metrics_only_mode
     if (use_adaptive_covariance_ || metrics_only_mode_) {
-        RCLCPP_DEBUG(logger, "\tNominal keypoint count: %.0f", nominal_keypoint_count_);
-        RCLCPP_DEBUG(logger, "\tMin keypoint ratio: %.2f", min_keypoint_ratio_);
+        RCLCPP_DEBUG(logger, "\tNominal correspondences count: %.0f", nominal_correspondences_count_);
         RCLCPP_DEBUG(logger, "\tMax covariance multiplier: %.1fx", max_covariance_multiplier_);
         RCLCPP_DEBUG(logger, "\tEnable covariance smoothing: %d", enable_covariance_smoothing_);
         RCLCPP_DEBUG(logger, "\tCovariance smoothing alpha: %.2f", covariance_smoothing_alpha_);
