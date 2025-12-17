@@ -105,6 +105,7 @@ OdometryServer::OdometryServer(const rclcpp::NodeOptions &options)
     // Construct the main KISS-ICP odometry node
     kiss_icp_ = std::make_unique<kiss_icp::pipeline::KissICP>(config);
 
+    process_each_x_frame_ = declare_parameter<int>("process_each_x_frame", 1);
     // Initialize subscribers
     pointcloud_sub_ = create_subscription<sensor_msgs::msg::PointCloud2>(
         "pointcloud_topic", rclcpp::SensorDataQoS(),
@@ -130,6 +131,9 @@ OdometryServer::OdometryServer(const rclcpp::NodeOptions &options)
 }
 
 void OdometryServer::RegisterFrame(const sensor_msgs::msg::PointCloud2::ConstSharedPtr &msg) {
+    if (frames_count_++ % process_each_x_frame_ != 0) {
+        return;
+    }
     const auto cloud_frame_id = msg->header.frame_id;
     const auto points = PointCloud2ToEigen(msg);
     const auto timestamps = GetTimestamps(msg);
