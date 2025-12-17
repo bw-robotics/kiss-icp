@@ -101,8 +101,7 @@ private:
     /// Adaptive covariance parameters
     bool use_adaptive_covariance_;
     bool metrics_only_mode_;             // Collect metrics but publish fixed covariance
-    double nominal_correspondences_count_;      // Expected keypoints in good conditions
-    double min_keypoint_ratio_;          // Below this ratio, start increasing covariance
+    int nominal_correspondences_count_;      // Expected keypoints in good conditions
     double max_covariance_multiplier_;   // Maximum inflation factor
     bool enable_covariance_smoothing_;
     double covariance_smoothing_alpha_;  // Exponential smoothing factor

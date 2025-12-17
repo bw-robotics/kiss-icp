@@ -132,7 +132,7 @@ void OdometryServer::initializeParameters(kiss_icp::pipeline::KISSConfig &config
     
     // Only read other adaptive params if enabled or metrics_only_mode
     if (use_adaptive_covariance_ || metrics_only_mode_) {
-        nominal_correspondences_count_ = declare_parameter<double>("adaptive_covariance.nominal_correspondences", 3500.0);
+        nominal_correspondences_count_ = declare_parameter<int>("adaptive_covariance.nominal_correspondences", 3500);
         max_covariance_multiplier_ = declare_parameter<double>("adaptive_covariance.max_multiplier", 50.0);
         enable_covariance_smoothing_ = declare_parameter<bool>("adaptive_covariance.enable_smoothing", true);
         covariance_smoothing_alpha_ = declare_parameter<double>("adaptive_covariance.smoothing_alpha", 0.7);
@@ -188,7 +188,7 @@ void OdometryServer::logParameters(kiss_icp::pipeline::KISSConfig &config) {
     
     // Only read other adaptive params if enabled or metrics_only_mode
     if (use_adaptive_covariance_ || metrics_only_mode_) {
-        RCLCPP_DEBUG(logger, "\tNominal correspondences count: %.0f", nominal_correspondences_count_);
+        RCLCPP_DEBUG(logger, "\tNominal correspondences count: %d", nominal_correspondences_count_);
         RCLCPP_DEBUG(logger, "\tMax covariance multiplier: %.1fx", max_covariance_multiplier_);
         RCLCPP_DEBUG(logger, "\tEnable covariance smoothing: %d", enable_covariance_smoothing_);
         RCLCPP_DEBUG(logger, "\tCovariance smoothing alpha: %.2f", covariance_smoothing_alpha_);
@@ -331,7 +331,7 @@ double OdometryServer::computeCovarianceMultiplier(size_t num_correspondences,
                                 static_cast<double>(num_source_points);
 
     // Absolute correspondences quality: how many inliers vs expected minimum
-    double correspondence_quality = static_cast<double>(num_correspondences) / (nominal_correspondences_count_);
+    double correspondence_quality = static_cast<double>(num_correspondences) / static_cast<double>(nominal_correspondences_count_);
 
     // Clamp to [0, 1]
     correspondence_quality = std::clamp(correspondence_quality, 0.0, 1.0);
