@@ -21,7 +21,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 cmake_minimum_required(VERSION 3.16...3.26)
-project(kiss_icp VERSION 1.0.0 LANGUAGES CXX)
+project(kiss_icp VERSION 1.0.0 LANGUAGES C CXX)
 
 set(CMAKE_BUILD_TYPE Release)
 
@@ -39,6 +39,7 @@ else()
 endif()
 
 find_package(ament_cmake REQUIRED)
+find_package(rosidl_default_generators REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
@@ -47,6 +48,12 @@ find_package(rcutils REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
+
+# Generate custom messages
+rosidl_generate_interfaces(${PROJECT_NAME}
+  "msg/RegistrationMetrics.msg"
+  DEPENDENCIES std_msgs
+)
 
 # ROS 2 node
 add_library(odometry_component SHARED src/OdometryServer.cpp)
@@ -64,9 +71,14 @@ ament_target_dependencies(
   std_msgs
   tf2_ros)
 
+# Link against the generated messages
+rosidl_get_typesupport_target(cpp_typesupport_target ${PROJECT_NAME} "rosidl_typesupport_cpp")
+target_link_libraries(odometry_component "${cpp_typesupport_target}")
+
 rclcpp_components_register_node(odometry_component PLUGIN "kiss_icp_ros::OdometryServer" EXECUTABLE kiss_icp_node)
 
 install(TARGETS odometry_component LIBRARY DESTINATION lib RUNTIME DESTINATION lib/${PROJECT_NAME})
 install(DIRECTORY launch rviz config DESTINATION share/${PROJECT_NAME}/)
+install(DIRECTORY msg DESTINATION share/${PROJECT_NAME}/)
 
 ament_package()
