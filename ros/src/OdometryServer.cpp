@@ -133,8 +133,8 @@ void OdometryServer::initializeParameters(kiss_icp::pipeline::KISSConfig &config
 
     // Only read other adaptive params if enabled or metrics_only_mode
     if (use_adaptive_covariance_ || metrics_only_mode_) {
-        nominal_correspondences_count_ = declare_parameter<int>("adaptive_covariance.nominal_correspondences", 7300);
-        max_covariance_multiplier_ = declare_parameter<double>("adaptive_covariance.max_multiplier", 50.0);
+        nominal_correspondences_count_ = declare_parameter<int>("adaptive_covariance.nominal_correspondences", 584);
+        max_covariance_multiplier_ = declare_parameter<double>("adaptive_covariance.max_multiplier", 25.0);
         enable_covariance_smoothing_ = declare_parameter<bool>("adaptive_covariance.enable_smoothing", true);
         covariance_smoothing_alpha_ = declare_parameter<double>("adaptive_covariance.smoothing_alpha", 0.7);
     }
@@ -142,7 +142,7 @@ void OdometryServer::initializeParameters(kiss_icp::pipeline::KISSConfig &config
     config.max_range = declare_parameter<double>("data.max_range", config.max_range);
     config.min_range = declare_parameter<double>("data.min_range", config.min_range);
     config.deskew = declare_parameter<bool>("data.deskew", config.deskew);
-    config.voxel_size = declare_parameter<double>("mapping.voxel_size", config.max_range / 100.0);
+    config.voxel_size = declare_parameter<double>("mapping.voxel_size", config.max_range / 20.0);
     config.max_points_per_voxel =
         declare_parameter<int>("mapping.max_points_per_voxel", config.max_points_per_voxel);
     config.initial_threshold =
