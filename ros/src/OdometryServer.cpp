@@ -345,7 +345,7 @@ double OdometryServer::computeCovarianceMultiplier(size_t num_correspondences,
     quality_factor = std::clamp(quality_factor, 0.0, 1.0);
 
     // 5. Map quality [0,1] -> multiplier [1, max_covariance_multiplier_]
-    //    Quadratic mapping. Options for Qubic, Quadratic, Linear
+    //    Quadratic mapping. Options for Cubic, Quadratic, Linear
     const double error = 1.0 - quality_factor;      // in [0, 1]
     double multiplier = 1.0 + (max_covariance_multiplier_ - 1.0) * error;
 
