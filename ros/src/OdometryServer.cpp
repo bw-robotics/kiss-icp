@@ -129,7 +129,7 @@ void OdometryServer::initializeParameters(kiss_icp::pipeline::KISSConfig &config
 
     // Adaptive covariance parameters
     use_adaptive_covariance_ = declare_parameter<bool>("adaptive_covariance.enable", false);
-    metrics_only_mode_ = declare_parameter<bool>("adaptive_covariance.metrics_only_mode", false);
+    metrics_only_mode_ = declare_parameter<bool>("adaptive_covariance.metrics_only_mode", true);
 
     // Only read other adaptive params if enabled or metrics_only_mode
     if (use_adaptive_covariance_ || metrics_only_mode_) {
