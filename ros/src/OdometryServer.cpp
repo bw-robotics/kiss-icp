@@ -157,7 +157,7 @@ void OdometryServer::initializeParameters(kiss_icp::pipeline::KISSConfig &config
         declare_parameter<int>("registration.max_num_threads", config.max_num_threads);
     if (config.max_range < config.min_range) {
         RCLCPP_WARN(get_logger(),
-                    "[WARNING] max_range is smaller than min_range, settng min_range to 0.0");
+                    "[WARNING] max_range is smaller than min_range, setting min_range to 0.0");
         config.min_range = 0.0;
     }
 
