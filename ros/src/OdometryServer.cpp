@@ -133,7 +133,7 @@ void OdometryServer::initializeParameters(kiss_icp::pipeline::KISSConfig &config
     // Only read other adaptive params if enabled or metrics_only_mode
     if (use_adaptive_covariance_ || metrics_only_mode_) {
         nominal_correspondences_count_ = declare_parameter<int>("adaptive_covariance.nominal_correspondences", 3500);
-        max_covariance_multiplier_ = declare_parameter<double>("adaptive_covariance.max_multiplier", 40.0);
+        max_covariance_multiplier_ = declare_parameter<double>("adaptive_covariance.max_multiplier", 25.0);
         enable_covariance_smoothing_ = declare_parameter<bool>("adaptive_covariance.enable_smoothing", true);
         covariance_smoothing_alpha_ = declare_parameter<double>("adaptive_covariance.smoothing_alpha", 0.7);
     }
