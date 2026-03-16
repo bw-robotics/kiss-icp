@@ -34,6 +34,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <std_msgs/msg/header.hpp>
+#include <kiss_icp/msg/registration_metrics.hpp>
 #include <string>
 
 namespace kiss_icp_ros {
@@ -45,6 +46,13 @@ public:
     explicit OdometryServer(const rclcpp::NodeOptions &options);
 
 private:
+    /// Declare ROS parameters and set the associated variables (in this class and in the provided
+    /// config object)
+    void initializeParameters(kiss_icp::pipeline::KISSConfig &config);
+
+    // Helper method to log all node parameters
+    void logParameters(kiss_icp::pipeline::KISSConfig &config);
+
     /// Register new frame
     void RegisterFrame(const sensor_msgs::msg::PointCloud2::ConstSharedPtr &msg);
 
@@ -52,8 +60,8 @@ private:
     void PublishOdometry(const Sophus::SE3d &kiss_pose, const std_msgs::msg::Header &header);
 
     /// Stream the debugging point clouds for visualization (if required)
-    void PublishClouds(const std::vector<Eigen::Vector3d> frame,
-                       const std::vector<Eigen::Vector3d> keypoints,
+    void PublishClouds(const std::vector<Eigen::Vector3d> &frame,
+                       const std::vector<Eigen::Vector3d> &keypoints,
                        const std_msgs::msg::Header &header);
 
 private:
@@ -67,12 +75,17 @@ private:
 
     /// Data subscribers.
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr pointcloud_sub_;
+    size_t frames_count_ {};
+    int process_each_x_frame_ = 1;
 
     /// Data publishers.
     rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom_publisher_;
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr frame_publisher_;
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr kpoints_publisher_;
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr map_publisher_;
+    
+    /// Metrics publisher (for statistical analysis)
+    rclcpp::Publisher<kiss_icp::msg::RegistrationMetrics>::SharedPtr metrics_pub_;
 
     /// KISS-ICP
     std::unique_ptr<kiss_icp::pipeline::KissICP> kiss_icp_;
@@ -84,6 +97,20 @@ private:
     /// Covariance diagonal
     double position_covariance_;
     double orientation_covariance_;
+    
+    /// Adaptive covariance parameters
+    bool use_adaptive_covariance_;
+    bool metrics_only_mode_;             // Collect metrics but publish fixed covariance
+    int nominal_correspondences_count_;      // Expected keypoints in good conditions
+    double max_covariance_multiplier_;   // Maximum inflation factor
+    bool enable_covariance_smoothing_;
+    double covariance_smoothing_alpha_;  // Exponential smoothing factor
+    
+    /// State for smoothing
+    double smoothed_covariance_multiplier_{1.0};
+    
+    /// Helper method to compute adaptive covariance multiplier
+    double computeCovarianceMultiplier(size_t num_correspondences, size_t num_source_points);
 };
 
 }  // namespace kiss_icp_ros
