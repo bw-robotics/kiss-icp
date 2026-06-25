@@ -111,6 +111,28 @@ private:
 
     /// Helper method to compute adaptive covariance multiplier
     double computeCovarianceMultiplier(size_t num_correspondences, size_t num_source_points);
+
+    /// Per-axis orientation covariance multipliers from KISS-only mismatch.
+    struct OrientationMismatchMultipliers {
+        double roll{1.0};
+        double pitch{1.0};
+        double yaw{1.0};
+    };
+
+    /// Orientation mismatch covariance (KISS-only, per-axis). Compares the current
+    /// KISS attitude to the displacement since the previous KISS pose.
+    bool use_orientation_mismatch_cov_{false};
+    double min_displacement_m_{0.05};
+    double max_mismatch_multiplier_{40.0};
+    double flat_slope_ratio_{0.3};
+    double mismatch_ref_deg_yaw_{15.0};
+    double mismatch_ref_deg_pitch_{12.0};
+    double mismatch_ref_deg_roll_{15.0};
+    double max_step_m_{5.0};  // jump guard: ignore implausible per-frame motion
+    bool has_prev_odom_{false};
+    Eigen::Vector3d prev_position_{Eigen::Vector3d::Zero()};
+
+    OrientationMismatchMultipliers computeOrientationMismatchMultipliers(const Sophus::SE3d &pose);
 };
 
 }  // namespace kiss_icp_ros
