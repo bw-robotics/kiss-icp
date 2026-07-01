@@ -25,6 +25,19 @@ kiss_icp_node:
       enable_smoothing: true       # Smooth covariance changes over time
       smoothing_alpha: 0.7         # Higher = less smoothing (0.0-1.0)
 
+    ####    Orientation Mismatch Covariance (KISS-only, per-axis)    ####
+    # Inflate roll/pitch/yaw covariance when KISS attitude disagrees with the
+    # KISS displacement direction. Disabled by default (backward compatible).
+    orientation_mismatch:
+      enable: false               # DEFAULT: DISABLED
+      min_displacement_m: 0.05
+      max_multiplier: 40.0        # single shared cap
+      flat_slope_ratio: 0.3       # |dz|/|dxy| below this -> roll mismatch active
+      mismatch_ref_deg_yaw: 15.0  # cov doubles at this mismatch (reverse-aware)
+      mismatch_ref_deg_pitch: 12.0
+      mismatch_ref_deg_roll: 15.0 # conservative; roll metric least reliable
+      max_step_m: 5.0             # jump guard: skip implausible per-frame motion
+
     ####    Core KISS-ICP parameters    ####
 
     data:

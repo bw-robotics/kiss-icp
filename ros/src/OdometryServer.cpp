@@ -22,6 +22,7 @@
 // SOFTWARE.
 #include <Eigen/Core>
 #include <algorithm>
+#include <cmath>
 #include <memory>
 #include <sophus/se3.hpp>
 #include <utility>
@@ -63,6 +64,27 @@ Sophus::SE3d LookupTransform(const std::string &target_frame,
                 err_msg.c_str());
     // default construction is the identity
     return Sophus::SE3d();
+}
+
+// Extract roll/pitch/yaw from an SO3, matching the ROS quaternion->RPY convention.
+void sophusToRpy(const Sophus::SO3d &so3, double &roll, double &pitch, double &yaw) {
+    const Eigen::Matrix3d R = so3.matrix();
+    pitch = std::asin(std::max(-1.0, std::min(1.0, -R(2, 0))));
+    roll = std::atan2(R(2, 1), R(2, 2));
+    yaw = std::atan2(R(1, 0), R(0, 0));
+}
+
+double wrapRad(double a) {
+    while (a > M_PI) a -= 2.0 * M_PI;
+    while (a < -M_PI) a += 2.0 * M_PI;
+    return a;
+}
+
+// Quadratic inflation: covariance DOUBLES (mult=2) at mismatch == ref_deg.
+double mismatchMultiplier(double mismatch_deg, double ref_deg, double max_mult) {
+    if (ref_deg <= 0.0 || max_mult < 1.0) return 1.0;  // guard: never shrink covariance
+    const double r = std::abs(mismatch_deg) / ref_deg;
+    return std::min(max_mult, 1.0 + r * r);
 }
 }  // namespace
 
@@ -139,6 +161,18 @@ void OdometryServer::initializeParameters(kiss_icp::pipeline::KISSConfig &config
         covariance_smoothing_alpha_ = declare_parameter<double>("adaptive_covariance.smoothing_alpha", 0.7);
     }
 
+    // Orientation mismatch covariance (KISS-only, per-axis)
+    use_orientation_mismatch_cov_ = declare_parameter<bool>("orientation_mismatch.enable", false);
+    if (use_orientation_mismatch_cov_) {
+        min_displacement_m_ = declare_parameter<double>("orientation_mismatch.min_displacement_m", 0.05);
+        max_mismatch_multiplier_ = declare_parameter<double>("orientation_mismatch.max_multiplier", 40.0);
+        flat_slope_ratio_ = declare_parameter<double>("orientation_mismatch.flat_slope_ratio", 0.3);
+        mismatch_ref_deg_yaw_ = declare_parameter<double>("orientation_mismatch.mismatch_ref_deg_yaw", 15.0);
+        mismatch_ref_deg_pitch_ = declare_parameter<double>("orientation_mismatch.mismatch_ref_deg_pitch", 12.0);
+        mismatch_ref_deg_roll_ = declare_parameter<double>("orientation_mismatch.mismatch_ref_deg_roll", 15.0);
+        max_step_m_ = declare_parameter<double>("orientation_mismatch.max_step_m", 5.0);
+    }
+
     config.max_range = declare_parameter<double>("data.max_range", config.max_range);
     config.min_range = declare_parameter<double>("data.min_range", config.min_range);
     config.deskew = declare_parameter<bool>("data.deskew", config.deskew);
@@ -193,6 +227,16 @@ void OdometryServer::logParameters(kiss_icp::pipeline::KISSConfig &config) {
         RCLCPP_DEBUG(logger, "\tMax covariance multiplier: %.1fx", max_covariance_multiplier_);
         RCLCPP_DEBUG(logger, "\tEnable covariance smoothing: %d", enable_covariance_smoothing_);
         RCLCPP_DEBUG(logger, "\tCovariance smoothing alpha: %.2f", covariance_smoothing_alpha_);
+    }
+
+    RCLCPP_DEBUG(logger, "\tOrientation mismatch cov: %d", use_orientation_mismatch_cov_);
+    if (use_orientation_mismatch_cov_) {
+        RCLCPP_DEBUG(logger, "\t  min_displacement_m: %.3f", min_displacement_m_);
+        RCLCPP_DEBUG(logger, "\t  max_multiplier: %.1f", max_mismatch_multiplier_);
+        RCLCPP_DEBUG(logger, "\t  flat_slope_ratio: %.2f", flat_slope_ratio_);
+        RCLCPP_DEBUG(logger, "\t  ref_deg (r,p,y): %.1f, %.1f, %.1f",
+                     mismatch_ref_deg_roll_, mismatch_ref_deg_pitch_, mismatch_ref_deg_yaw_);
+        RCLCPP_DEBUG(logger, "\t  max_step_m: %.2f", max_step_m_);
     }
 
     RCLCPP_DEBUG(logger, "\tMax range: %.2f", config.max_range);
@@ -286,24 +330,30 @@ void OdometryServer::PublishOdometry(const Sophus::SE3d &kiss_pose,
     odom_msg.pose.pose = tf2::sophusToPose(pose);
     odom_msg.pose.covariance.fill(0.0);
 
-    // Apply multiplier (will be 1.0 if disabled)
-    double adaptive_pos_cov = position_covariance_ * cov_multiplier;
-    double adaptive_orient_cov = orientation_covariance_ * cov_multiplier;
+    // Apply registration multiplier (1.0 if disabled) to position; orientation
+    // additionally scaled by per-axis KISS-only mismatch multipliers.
+    const auto mis = computeOrientationMismatchMultipliers(pose);
+    const double adaptive_pos_cov = position_covariance_ * cov_multiplier;
+    const double cov_roll = orientation_covariance_ * cov_multiplier * mis.roll;
+    const double cov_pitch = orientation_covariance_ * cov_multiplier * mis.pitch;
+    const double cov_yaw = orientation_covariance_ * cov_multiplier * mis.yaw;
 
     odom_msg.pose.covariance[0] = adaptive_pos_cov;    // x
     odom_msg.pose.covariance[7] = adaptive_pos_cov;     // y
     odom_msg.pose.covariance[14] = adaptive_pos_cov;    // z
-    odom_msg.pose.covariance[21] = adaptive_orient_cov; // roll
-    odom_msg.pose.covariance[28] = adaptive_orient_cov; // pitch
-    odom_msg.pose.covariance[35] = adaptive_orient_cov; // yaw
+    odom_msg.pose.covariance[21] = cov_roll;            // roll
+    odom_msg.pose.covariance[28] = cov_pitch;           // pitch
+    odom_msg.pose.covariance[35] = cov_yaw;             // yaw
 
     // Optional logging for debugging (only when enabled)
-    if (use_adaptive_covariance_ || metrics_only_mode_) {
-        RCLCPP_DEBUG(get_logger(), 
-                     "Metrics: corr=%zu/%zu (%.1f%%), mult=%.2fx, pos_cov=%.3f, orient_cov=%.3f%s",
+    if (use_adaptive_covariance_ || metrics_only_mode_ || use_orientation_mismatch_cov_) {
+        RCLCPP_DEBUG(get_logger(),
+                     "Metrics: corr=%zu/%zu (%.1f%%), reg_mult=%.2fx, mis(r,p,y)=(%.2f,%.2f,%.2f), "
+                     "pos_cov=%.3f, orient_cov(r,p,y)=(%.3f,%.3f,%.3f)%s",
                      num_correspondences, num_source_points,
                      100.0 * num_correspondences / std::max(size_t(1), num_source_points),
-                     cov_multiplier, adaptive_pos_cov, adaptive_orient_cov,
+                     cov_multiplier, mis.roll, mis.pitch, mis.yaw,
+                     adaptive_pos_cov, cov_roll, cov_pitch, cov_yaw,
                      metrics_only_mode_ ? " [METRICS-ONLY]" : "");
     }
     
@@ -357,6 +407,57 @@ double OdometryServer::computeCovarianceMultiplier(size_t num_correspondences,
     }
 
     return multiplier;
+}
+
+OdometryServer::OrientationMismatchMultipliers
+OdometryServer::computeOrientationMismatchMultipliers(const Sophus::SE3d &pose) {
+    OrientationMismatchMultipliers out;
+    if (!use_orientation_mismatch_cov_) return out;
+
+    const Eigen::Vector3d t = pose.translation();
+    double roll, pitch, yaw;
+    sophusToRpy(pose.so3(), roll, pitch, yaw);
+
+    if (!has_prev_odom_) {
+        has_prev_odom_ = true;
+        prev_position_ = t;
+        return out;
+    }
+
+    const Eigen::Vector3d delta = t - prev_position_;
+    prev_position_ = t;
+
+    const double dxy = delta.head<2>().norm();
+    const double disp = delta.norm();
+
+    // Jump guard: a KISS pose reset/teleport produces a huge step whose direction
+    // is meaningless; skip it (keep mult=1) rather than max-inflating.
+    if (disp > max_step_m_) return out;
+
+    // Yaw: heading vs displacement bearing, reverse-aware (compare to undirected
+    // line of travel so legitimate reverse driving is not flagged as a fault).
+    if (dxy >= min_displacement_m_) {
+        const double heading = std::atan2(delta.y(), delta.x());
+        const double raw_deg = std::abs(wrapRad(yaw - heading)) * (180.0 / M_PI);
+        const double mis_deg = std::min(raw_deg, 180.0 - raw_deg);
+        out.yaw = mismatchMultiplier(mis_deg, mismatch_ref_deg_yaw_, max_mismatch_multiplier_);
+    }
+
+    // Pitch: body pitch vs 3D motion slope (direction-independent).
+    if (disp >= min_displacement_m_) {
+        const double path_pitch = std::atan2(-delta.z(), dxy);
+        const double mis_deg = std::abs(wrapRad(pitch - path_pitch)) * (180.0 / M_PI);
+        out.pitch = mismatchMultiplier(mis_deg, mismatch_ref_deg_pitch_, max_mismatch_multiplier_);
+    }
+
+    // Roll: on flat-ish horizontal motion, roll should be ~0.
+    if (dxy >= min_displacement_m_ && dxy > 0.0 &&
+        std::abs(delta.z()) / dxy < flat_slope_ratio_) {
+        const double mis_deg = std::abs(roll) * (180.0 / M_PI);
+        out.roll = mismatchMultiplier(mis_deg, mismatch_ref_deg_roll_, max_mismatch_multiplier_);
+    }
+
+    return out;
 }
 
 void OdometryServer::PublishClouds(const std::vector<Eigen::Vector3d> &frame,
